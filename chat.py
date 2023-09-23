@@ -9,11 +9,18 @@ from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
+from langchain.prompts.prompt import PromptTemplate
 
-# read in secret keys
-gpt_key = keys.gpt_key
+# read in secret keys if local file 
+# gpt_key = keys.gpt_key
+# embed_key = keys.embed_key
+
+# read in secret keys for deployment
+gpt_key = st.secrets["gpt_key"]
+embed_key = st.secrets["embed_key"]
+
+# define the endpoints 
 gpt_endpoint = "https://raid-ses-openai.openai.azure.com/"
-embed_key = keys.embed_key
 embed_endpoint = "https://raid-openai-e27bcf212.openai.azure.com/"
 
 # Define the path for database load
@@ -42,12 +49,22 @@ st.title("Chat with Pubs")
 # load the database
 db = FAISS.load_local(DB_FAISS_PATH, embedding_model)
 
-# with st.form('myform', clear_on_submit=True):
-#     page_num = st.number_input('Enter max number of pages to retrieve:', placeholder = '1 - 15', min_value=0, max_value=15, step=1)
-#     submitted = st.form_submit_button('Submit')
-
 # Create a conversational chain
 retriever = db.as_retriever(search_kwargs = {"k": 10})
+
+custom_template = """
+You are a bot designed to answer military pilot trainees' questions from various flying handbooks and rulebooks. Use the context provided below to answer their questions. If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+
+{context}
+
+Additionally, this was the chat history of your conversation with the user.
+{chat_history}
+
+Question: {question}
+
+"""
+
+PROMPT = PromptTemplate.from_template(template=custom_template)
 
 memory = ConversationSummaryMemory(llm=llm,
                                 memory_key="chat_history", 
@@ -64,7 +81,7 @@ qa = ConversationalRetrievalChain.from_llm(llm=llm,
 def conversational_chat(query):
     result = qa({"question": query, "chat_history": st.session_state['history']})
     st.session_state['history'].append((query, result["answer"]))
-    return result["answer"]
+    return result["answer"], result["source_documents"][0].metadata["source"]
 
 # Initialize chat history
 if 'history' not in st.session_state:
@@ -88,9 +105,9 @@ with container:
         submit_button = st.form_submit_button(label='Send')
 
     if submit_button and user_input:
-        output = conversational_chat(user_input)
+        output, source = conversational_chat(user_input)
         st.session_state['past'].append(user_input)
-        st.session_state['generated'].append(output)
+        st.session_state['generated'].append(output + "\n\n"  + "Source: " + source)
 
 # Display chat history
 if st.session_state['generated']:
