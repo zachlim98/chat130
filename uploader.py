@@ -102,7 +102,6 @@ uploaded_file = st.file_uploader("Upload a file 💻", accept_multiple_files=Tru
 if uploaded_file:
     for file in uploaded_file:
         file_path = save_uploaded_file(file)
-        st.write(f"Saved {file_path}")
 
 st.write("Uploaded Files:")
 
