@@ -98,7 +98,7 @@ def create_embed(upload_dir):
 
 st.title("Pubs Upload Version Tracker ✈️")
 
-uploaded_file = st.file_uploader("Upload a file 💻")
+uploaded_file = st.file_uploader("Upload a file 💻", accept_multiple_files=True)
 if uploaded_file:
     file_path = save_uploaded_file(uploaded_file)
     st.write(f"Saved {file_path}")
