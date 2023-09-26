@@ -1,23 +1,22 @@
 # Import necessary libraries
 import streamlit as st
-# import keys
+from streamlit_chat import message
+import keys
 
 from langchain.chat_models import AzureChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationSummaryBufferMemory
+from langchain.memory import ConversationSummaryMemory
 from langchain.prompts.prompt import PromptTemplate
 
-from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
-
 # read in secret keys if local file 
-# gpt_key = keys.gpt_key
-# embed_key = keys.embed_key
+gpt_key = keys.gpt_key
+embed_key = keys.embed_key
 
 # read in secret keys for deployment
-gpt_key = st.secrets["gpt_key"]
-embed_key = st.secrets["embed_key"]
+# gpt_key = st.secrets["gpt_key"]
+# embed_key = st.secrets["embed_key"]
 
 # define the endpoints 
 gpt_endpoint = "https://raid-ses-openai.openai.azure.com/"
@@ -64,17 +63,11 @@ Question: {question}
 
 """
 
-# Set up memory
-msgs = StreamlitChatMessageHistory(key="langchain_messages")
-if len(msgs.messages) == 0:
-    msgs.add_ai_message("Ask me anything from the PEM and FIHA AD2?")
-
 PROMPT = PromptTemplate.from_template(template=custom_template)
 
-memory = ConversationSummaryBufferMemory(llm=llm,
+memory = ConversationSummaryMemory(llm=llm,
                                 memory_key="chat_history", 
-                                chat_memory=msgs,
-                                input_key="question",
+                                input_key="question", 
                                 output_key="answer", 
                                 return_messages=True)
 
@@ -84,13 +77,41 @@ qa = ConversationalRetrievalChain.from_llm(llm=llm,
                                            memory = memory,
                                            combine_docs_chain_kwargs={"prompt" : PROMPT})
 
-# Render current messages from StreamlitChatMessageHistory
-for msg in msgs.messages:
-    st.chat_message(msg.type).write(msg.content)
+# Function for conversational chat
+def conversational_chat(query):
+    result = qa({"question": query, "chat_history": st.session_state['history']})
+    st.session_state['history'].append((query, result["answer"]))
+    return result["answer"], result["source_documents"][0].metadata["source"]
 
-# If user inputs a new prompt, generate and draw a new response
-if prompt := st.chat_input():
-    st.chat_message("human").write(prompt)
-    # Note: new messages are saved to history automatically by Langchain during run
-    response = qa(prompt)["answer"]
-    st.chat_message("ai").write(response)
+# Initialize chat history
+if 'history' not in st.session_state:
+    st.session_state['history'] = []
+
+# Initialize messages
+if 'generated' not in st.session_state:
+    st.session_state['generated'] = ["Hello! " + " 🤗"]
+
+if 'past' not in st.session_state:
+    st.session_state['past'] = ["Hey! 👋"]
+
+# Create containers for chat history and user input
+response_container = st.container()
+container = st.container()
+
+# User input form
+with container:
+    with st.form(key='my_form', clear_on_submit=True):
+        user_input = st.text_input("Query:", placeholder="Ask me anything about BWC!", key='input')
+        submit_button = st.form_submit_button(label='Send')
+
+    if submit_button and user_input:
+        output, source = conversational_chat(user_input)
+        st.session_state['past'].append(user_input)
+        st.session_state['generated'].append(output + "\n\n"  + "Source: " + source)
+
+# Display chat history
+if st.session_state['generated']:
+    with response_container:
+        for i in range(len(st.session_state['generated'])):
+            message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="adventurer")
+            message(st.session_state["generated"][i], key=str(i), avatar_style="bottts")
