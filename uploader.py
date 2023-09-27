@@ -15,11 +15,9 @@ from langchain.document_loaders import PyPDFLoader, DirectoryLoader
 
 # read in secret keys for deployment
 gpt_key = st.secrets["gpt_key"]
-embed_key = st.secrets["embed_key"]
 
 # define the endpoints 
 gpt_endpoint = "https://raid-ses-openai.openai.azure.com/"
-embed_endpoint = "https://raid-openai-e27bcf212.openai.azure.com/"
 
 UPLOAD_DIRECTORY = "uploaded_files"
 
@@ -78,7 +76,7 @@ def vector_load(docs, key, endpoint):
     openai_api_key=key, 
     openai_api_base=endpoint,
     openai_api_version="2023-05-15",
-    deployment="text-embedding-ada-002"
+    deployment="swiftfaq-ada002"
     )
     
     # need to build some logic here for checking the database - if exists then just add if not, create
@@ -90,7 +88,7 @@ def vector_load(docs, key, endpoint):
 # function to combine both
 def create_embed(upload_dir):
     docs = load_docs(upload_dir)
-    db = vector_load(docs, embed_key, embed_endpoint)
+    db = vector_load(docs, gpt_key, gpt_endpoint)
     
     db.save_local("vecstore")
     

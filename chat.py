@@ -17,11 +17,9 @@ from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
 
 # read in secret keys for deployment
 gpt_key = st.secrets["gpt_key"]
-embed_key = st.secrets["embed_key"]
 
 # define the endpoints 
 gpt_endpoint = "https://raid-ses-openai.openai.azure.com/"
-embed_endpoint = "https://raid-openai-e27bcf212.openai.azure.com/"
 
 # Define the path for database load
 DB_FAISS_PATH = 'dbstore'
@@ -37,10 +35,10 @@ llm = AzureChatOpenAI(openai_api_type="azure",
 # Define embedding model for db load
 embedding_model = OpenAIEmbeddings(
     openai_api_type="azure",
-    openai_api_key=embed_key, 
-    openai_api_base=embed_endpoint,
+    openai_api_key=gpt_key, 
+    openai_api_base=gpt_endpoint,
     openai_api_version="2023-05-15",
-    deployment="text-embedding-ada-002"
+    deployment="swiftfaq-ada002"
     )
 
 # Set the title for the Streamlit app
