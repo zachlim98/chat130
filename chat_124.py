@@ -64,7 +64,7 @@ Question: {question}
 # Set up memory
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
 if len(msgs.messages) == 0:
-    msgs.add_ai_message("Ask me anything from the EEM and AP3456 - please give me some time, I am running on a free server")
+    msgs.add_ai_message("Ask me anything from the EEM, AP3456, and RIFM - please give me some time, I am running on a free server")
 
 PROMPT = PromptTemplate.from_template(template=custom_template)
 
